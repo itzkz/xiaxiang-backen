@@ -1,12 +1,18 @@
 package com.itzkz.usercenter;
 
 
+import cn.hutool.core.lang.Assert;
+import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.service.UserService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
+import javax.lang.model.element.VariableElement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @SpringBootTest
 class UserCenterApplicationTests {
@@ -49,6 +55,16 @@ class UserCenterApplicationTests {
         result = userService.userRegister(userAccount, userPassword, checkPassword);
         Assertions.assertTrue(result > 0);
     }
+
+    @Test
+    public void searchUserByTags(){
+
+        List<String> asList = Arrays.asList("Java", "Python");
+        List<User> userList = userService.searchUserByTags(asList);
+        System.out.println(userList);
+        Assert.notEmpty(userList);
+    }
+
 
 }
 
