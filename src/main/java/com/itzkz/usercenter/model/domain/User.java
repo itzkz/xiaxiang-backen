@@ -59,7 +59,10 @@ public class User implements Serializable {
      * 电话
      */
     private String phone;
-
+    /**
+     * 标签
+     */
+    private  String tags;
     /**
      * 创建时间
      */
@@ -74,7 +77,6 @@ public class User implements Serializable {
      * 用户角色 0普通用户 1 管理员
      */
     private int userrole;
-
 
     /**
      * 是否删除

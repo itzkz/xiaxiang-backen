@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.itzkz.usercenter.model.domain.User;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 用户服务接口
@@ -45,4 +46,11 @@ public interface UserService extends IService<User> {
      * @return 脱敏用户
      */
     User safaUser(User user);
+
+    /**
+     * 根据标签列表来查询用户
+     * @param tagNameList 标签列表
+     * @return 脱敏用户列表
+     */
+    List<User> getUserByTags(List<String> tagNameList);
 }

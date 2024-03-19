@@ -4,7 +4,6 @@ import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.itzkz.usercenter.common.ErrorCode;
-import com.itzkz.usercenter.common.ResultUtils;
 import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.mapper.UserMapper;
@@ -14,8 +13,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -174,6 +176,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         return safeUser;
     }
+
+    @Override
+    public List<User> getUserByTags(List<String> tagNameList){
+        if (tagNameList == null || tagNameList.isEmpty()) {
+            return new ArrayList<>(); // 返回一个空列表而不是 null
+        }
+
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        List<User> resultUserList = new ArrayList<>(); // 创建一个用于存放最终结果的列表
+
+        for (String tagName : tagNameList) {
+            LambdaQueryWrapper<User> subQueryWrapper = new LambdaQueryWrapper<>(); // 每次循环创建一个新的查询条件
+
+            subQueryWrapper.like(User::getTags, tagName);
+            List<User> userList = this.list(subQueryWrapper);
+
+            List<User> safeUserList = userList.stream()
+                    .map(user -> safaUser(user))
+                    .collect(Collectors.toList());
+
+            resultUserList.addAll(safeUserList); // 将处理后的结果添加到最终结果列表中
+        }
+
+        return resultUserList;
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
 
 
