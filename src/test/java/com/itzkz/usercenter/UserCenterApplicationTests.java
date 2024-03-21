@@ -9,8 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
-import javax.lang.model.element.VariableElement;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 

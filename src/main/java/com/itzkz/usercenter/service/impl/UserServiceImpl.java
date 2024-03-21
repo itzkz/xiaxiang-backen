@@ -14,8 +14,7 @@
     import org.apache.commons.lang3.StringUtils;
     import org.springframework.stereotype.Service;
     import javax.servlet.http.HttpServletRequest;
-    import java.util.List;
-    import java.util.Set;
+    import java.util.*;
     import java.util.regex.Matcher;
     import java.util.regex.Pattern;
     import java.util.stream.Collectors;
@@ -181,6 +180,12 @@
         @Override
         public List<User> searchUserByTags(List<String> tagNameList) {
 
+
+//            if (CollectionUtils.isEmpty(tagNameList)){
+//                throw new BusinessException(ErrorCode.PARAMS_ERROR);
+//            }
+
+
             //1.直接去数据库查询
 //            if (tagNameList == null || tagNameList.isEmpty()) {
 //                throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -212,6 +217,8 @@
                 Set<String> tempTagNameSet = gson.fromJson(tagsStr, new
                         TypeToken<Set<String>>() {
                         }.getType());
+                //tempTagNameSet 为空则返回空的hashset对象 不空则返回其值   上面已有空判断
+                //tempTagNameSet =Optional.ofNullable(tempTagNameSet).orElse(new HashSet<>());
                 for (String tagName : tagNameList){
                     if (!tempTagNameSet.contains(tagName)){
                         return false;

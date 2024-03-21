@@ -10,6 +10,7 @@ import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.domain.request.UserLoginRequest;
 import com.itzkz.usercenter.model.domain.request.UserRegisterRequest;
 import com.itzkz.usercenter.service.UserService;
+import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
+@Api(tags = "用户接口")
 @RequestMapping("/user")
 public class UserController {
     @Resource
