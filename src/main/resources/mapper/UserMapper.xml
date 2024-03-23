@@ -5,20 +5,21 @@
 <mapper namespace="com.itzkz.usercenter.mapper.UserMapper">
 
     <resultMap id="BaseResultMap" type="com.itzkz.usercenter.model.domain.User">
-            <id property="id" column="id" jdbcType="BIGINT"/>
-            <result property="username" column="username" jdbcType="VARCHAR"/>
-            <result property="useraccount" column="userAccount" jdbcType="VARCHAR"/>
-            <result property="avatarurl" column="avatarUrl" jdbcType="VARCHAR"/>
-            <result property="gender" column="gender" jdbcType="TINYINT"/>
-            <result property="userpassword" column="userPassword" jdbcType="VARCHAR"/>
-            <result property="email" column="email" jdbcType="VARCHAR"/>
-            <result property="userstatus" column="userStatus" jdbcType="INTEGER"/>
-            <result property="phone" column="phone" jdbcType="VARCHAR"/>
-            <result property="createtime" column="createTime" jdbcType="TIMESTAMP"/>
-            <result property="updatetime" column="updateTime" jdbcType="TIMESTAMP"/>
-            <result property="isdelete" column="isDelete" jdbcType="TINYINT"/>
-            <result property="userrole" column="userRole" jdbcType="INTEGER"/>
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="useraccount" column="userAccount" jdbcType="VARCHAR"/>
+        <result property="avatarurl" column="avatarUrl" jdbcType="VARCHAR"/>
+        <result property="gender" column="gender" jdbcType="TINYINT"/>
+        <result property="userpassword" column="userPassword" jdbcType="VARCHAR"/>
+        <result property="email" column="email" jdbcType="VARCHAR"/>
+        <result property="userstatus" column="userStatus" jdbcType="INTEGER"/>
+        <result property="phone" column="phone" jdbcType="VARCHAR"/>
+        <result property="createtime" column="createTime" jdbcType="TIMESTAMP"/>
+        <result property="updatetime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="isdelete" column="isDelete" jdbcType="TINYINT"/>
+        <result property="userrole" column="userRole" jdbcType="INTEGER"/>
         <result property="tags" column="tags" jdbcType="INTEGER"/>
+        <result property="profile" column="profile" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -26,6 +27,6 @@
         avatarUrl,gender,userPassword,
         email,userStatus,phone,
         createTime,updateTime,isDelete,
-        userRole,tags
+        userRole,tags,profile
     </sql>
 </mapper>

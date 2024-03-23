@@ -13,6 +13,7 @@ import com.itzkz.usercenter.service.UserService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Api(tags = "用户接口")
 @RequestMapping("/user")
+@CrossOrigin(origins = "http://localhost:5173/")
 public class UserController {
     @Resource
     private UserService userService;
@@ -134,6 +136,21 @@ public class UserController {
         return safaUser;
     }
 
+    /**
+     * 根据用户标签搜索用户
+     * @param tagNameList 用户标签列表
+     * @return 用户列表
+     */
+
+    @GetMapping("/search/tags")
+    public BaseResponse<List<User>> getUserListByTag(@RequestParam(required = false) List<String> tagNameList) {
+
+        if (CollectionUtils.isEmpty(tagNameList)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        List<User> userList = userService.searchUserByTags(tagNameList);
+        return ResultUtils.success(userList);
+    }
 
     /**
      * 校验是否为管理员
