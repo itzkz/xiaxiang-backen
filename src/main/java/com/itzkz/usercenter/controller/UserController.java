@@ -25,12 +25,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Api(tags = "用户接口")
 @RequestMapping("/user")
-@CrossOrigin(origins = "http://localhost:5173/")
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserController {
     @Resource
     private UserService userService;
 
-
+    /**
+     * 用户注册
+     *
+     * @param registerRequest 注册参数
+     * @return 统一响应类
+     */
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest registerRequest) {
         if (registerRequest == null) {
@@ -48,6 +53,13 @@ public class UserController {
 
     }
 
+    /**
+     * 用户登录
+     *
+     * @param loginRequest 登录参数
+     * @param request      请求
+     * @return 统一响应类
+     */
 
     @PostMapping("/login")
     public BaseResponse<User> userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
@@ -66,8 +78,8 @@ public class UserController {
     /**
      * 用户注销
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return 统一响应类
      */
     @PostMapping("/logout")
     public BaseResponse<Integer> userLogout(HttpServletRequest request) {
@@ -81,14 +93,14 @@ public class UserController {
     /**
      * 用户查询
      *
-     * @param username
-     * @param request
-     * @return
+     * @param username 用户名称
+     * @param request  请求
+     * @return 用户列表
      */
     @GetMapping("/search")
     public List<User> search(String username, HttpServletRequest request) {
 
-        if (!isAdmin(request)) {
+        if (!userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH, "缺少管理员权限");
         }
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
@@ -105,14 +117,14 @@ public class UserController {
     /**
      * 删除用户
      *
-     * @param id
-     * @param request
-     * @return
+     * @param id      用户id
+     * @param request 请求
+     * @return 统一响应类
      */
     @GetMapping("/delete")
     public BaseResponse<Boolean> deleteById(@PathVariable Long id, HttpServletRequest request) {
 
-        if (!isAdmin(request)) {
+        if (!userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
         if (id <= 0) {
@@ -123,11 +135,17 @@ public class UserController {
 
     }
 
+    /**
+     * 获取当前用户
+     *
+     * @param request 请求
+     * @return 当前用户
+     */
     @GetMapping("/current")
     public User getCurrentUser(HttpServletRequest request) {
         User currentUser = (User) request.getSession().getAttribute(UserConstant.SESSION_KEY);
         if (currentUser == null) {
-           return null;
+            return null;
         }
         Long currentUserId = currentUser.getId();
         //todo 校验用户是否合法
@@ -138,6 +156,7 @@ public class UserController {
 
     /**
      * 根据用户标签搜索用户
+     *
      * @param tagNameList 用户标签列表
      * @return 用户列表
      */
@@ -145,7 +164,7 @@ public class UserController {
     @GetMapping("/search/tags")
     public BaseResponse<List<User>> getUserListByTag(@RequestParam(required = false) List<String> tagNameList) {
 
-        if (CollectionUtils.isEmpty(tagNameList)){
+        if (CollectionUtils.isEmpty(tagNameList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         List<User> userList = userService.searchUserByTags(tagNameList);
@@ -153,17 +172,22 @@ public class UserController {
     }
 
     /**
-     * 校验是否为管理员
+     * 更新用户
      *
-     * @param request
-     * @return
+     * @param user    被修改用户
+     * @param request 请求
+     * @return boolean
      */
-    private boolean isAdmin(HttpServletRequest request) {
-        //仅管理员可查询
+    @PostMapping("/update")
+    public BaseResponse<Boolean> updateUser(User user, HttpServletRequest request) {
 
-        User user = (User) request.getSession().getAttribute(UserConstant.SESSION_KEY);
-        if (user == null || user.getUserrole() != UserConstant.USER_ADMIN)
-            return false;
-        return true;
+        if (user == null || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(userService.updateUser(user, loginUser));
+
     }
+
+
 }

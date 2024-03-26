@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,6 +181,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return safeUser;
     }
 
+    /**
+     * 根据用户标签列表查询对应用户列表
+     *
+     * @param tagNameList 标签列表
+     * @return 用户列表
+     */
     @Override
     public List<User> searchUserByTags(List<String> tagNameList) {
 
@@ -231,6 +238,101 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }).map(this::safaUser).collect(Collectors.toList());
     }
 
+    /**
+     * 获取当前登录用户
+     *
+     * @param request 请求
+     * @return 当前登录用户
+     */
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        User userObj = (User) request.getSession().getAttribute(UserConstant.SESSION_KEY);
+        if (userObj == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        return userObj;
+    }
 
+    /**
+     * 更新用户
+     *
+     * @param user      被修改用户
+     * @param loginUser 登录用户
+     * @return 1
+     */
+    @Override
+    public boolean updateUser(User user, User loginUser) {
+        //1 判断参数是否为空
+        if (user == null || loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //提取公共部分
+        Long userId = user.getId();
+        if (userId <= 0) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN);
+            }
+        User oldUser = this.getById(userId);
+        if (oldUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        //2 如果是管理员 则可以修改任意用户
+//        if (isAdmin(loginUser)) {
+//            if (userId <= 0) {
+//                throw new BusinessException(ErrorCode.PARAMS_ERROR);
+//            }
+//            User oldUser = this.getById(userId);
+//            if (oldUser == null) {
+//                throw new BusinessException(ErrorCode.NOT_LOGIN);
+//            }
+//            return this.updateById(user);
+//
+//        }
+//        //3 如果不是管理员则只能修改自己
+//        if (!Objects.equals(userId, loginUser.getId())) {
+//            throw new BusinessException(ErrorCode.NO_AUTH);
+//        }
+//        User oldUser = this.getById(userId);
+//        if (oldUser == null) {
+//            throw new BusinessException(ErrorCode.NOT_LOGIN);
+//        }
+//        return this.updateById(user);
+
+       //优化逻辑
+        if (!isAdmin(loginUser) && !Objects.equals(userId, loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        return this.updateById(user);
+    }
+
+    /**
+     * 校验是否为管理员
+     *
+     * @param request
+     * @return
+     */
+    @Override
+    public boolean isAdmin(HttpServletRequest request) {
+        //仅管理员可查询
+        User user = (User) request.getSession().getAttribute(UserConstant.SESSION_KEY);
+        return user != null && user.getUserrole() == UserConstant.USER_ADMIN;
+    }
+
+    /**
+     * 校验是否为管理员
+     *
+     * @param loginUser 登录用户
+     * @return boolean
+     */
+    @Override
+    public boolean isAdmin(User loginUser) {
+
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        return loginUser.getUserrole() == UserConstant.USER_ADMIN;
+    }
 }
 

@@ -1,8 +1,10 @@
 package com.itzkz.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.model.domain.User;
 
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
@@ -53,4 +55,36 @@ public interface UserService extends IService<User> {
      * @return 脱敏用户列表
      */
     List<User> searchUserByTags(List<String> tagNameList);
+
+
+    /**
+     * 获取当前用户
+     * @param request 请求
+     * @return 登录用户
+     */
+    User getLoginUser (HttpServletRequest request);
+
+    /**
+     * 更新用户
+     * @param user 被修改用户
+     * @param loginUser 登录用户
+     * @return 1
+     */
+    boolean updateUser(User user ,User loginUser);
+
+    /**
+     * 校验是否为管理员
+     *
+     * @param request 请求
+     * @return boolean
+     */
+    boolean isAdmin(HttpServletRequest request);
+
+    /**
+     * 校验是否为管理员
+     * @param loginUser 登录用户
+     * @return boolean
+     */
+    boolean isAdmin(User loginUser);
+
 }
