@@ -1,6 +1,7 @@
 package com.itzkz.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.itzkz.usercenter.common.BaseResponse;
 import com.itzkz.usercenter.common.ErrorCode;
 import com.itzkz.usercenter.common.ResultUtils;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Api(tags = "用户接口")
 @RequestMapping("/user")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class UserController {
     @Resource
     private UserService userService;
@@ -113,6 +115,31 @@ public class UserController {
         return list;
     }
 
+    /**
+     * 用户推荐
+     * @param pageSize 每页展示的数量
+     * @param pageNum  当前页面
+     * @param request 请求
+     * @return
+     */
+    @GetMapping("/recommend")
+    public BaseResponse<List<User>> RecommendUser(Long pageSize, Long pageNum, HttpServletRequest request) {
+        Object loginUser = userService.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        Page<User> userList = userService.page(new Page<>(pageNum, pageSize), queryWrapper);
+
+        List<User> list = new ArrayList<>();
+        userList.getRecords().forEach(user -> {
+            User safeUser = userService.safaUser(user);
+            list.add(safeUser);
+        });
+
+        return ResultUtils.success(list);
+    }
+
 
     /**
      * 删除用户
@@ -142,16 +169,16 @@ public class UserController {
      * @return 当前用户
      */
     @GetMapping("/current")
-    public User getCurrentUser(HttpServletRequest request) {
+    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         User currentUser = (User) request.getSession().getAttribute(UserConstant.SESSION_KEY);
         if (currentUser == null) {
-            return null;
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         Long currentUserId = currentUser.getId();
         //todo 校验用户是否合法
         User user = userService.getById(currentUserId);
         User safaUser = userService.safaUser(user);
-        return safaUser;
+        return ResultUtils.success(safaUser);
     }
 
     /**
@@ -179,7 +206,7 @@ public class UserController {
      * @return boolean
      */
     @PostMapping("/update")
-    public BaseResponse<Boolean> updateUser(User user, HttpServletRequest request) {
+    public BaseResponse<Boolean> updateUser(@RequestBody User user, HttpServletRequest request) {
 
         if (user == null || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
