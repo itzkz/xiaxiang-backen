@@ -14,6 +14,8 @@ import com.itzkz.usercenter.service.UserService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -31,6 +34,8 @@ import java.util.stream.Collectors;
 public class UserController {
     @Resource
     private UserService userService;
+    @Resource
+    private RedisTemplate redisTemplate;
 
     /**
      * 用户注册
@@ -64,7 +69,7 @@ public class UserController {
      */
 
     @PostMapping("/login")
-    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
+    public BaseResponse userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
         if (loginRequest == null) {
             return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
@@ -117,27 +122,42 @@ public class UserController {
 
     /**
      * 用户推荐
+     *
      * @param pageSize 每页展示的数量
      * @param pageNum  当前页面
-     * @param request 请求
+     * @param request  请求
      * @return
      */
     @GetMapping("/recommend")
-    public BaseResponse<List<User>> RecommendUser(Long pageSize, Long pageNum, HttpServletRequest request) {
-        Object loginUser = userService.getLoginUser(request);
+    public BaseResponse<Page<User>> RecommendUser(Long pageSize, Long pageNum, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
         if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        Page<User> userList = userService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        String redisKey = String.format("itzkz:recommend:%s", loginUser.getId());
+        //如果有缓存，直接从缓存中读取
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+        Page<User> userPage = (Page<User>) valueOperations.get(redisKey);
 
+        if (userPage != null) {
+            return ResultUtils.success(userPage);
+        }
+        //如果没有缓存就从数据库中读取
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        userPage = userService.page(new Page<>(pageNum, pageSize), queryWrapper);
         List<User> list = new ArrayList<>();
-        userList.getRecords().forEach(user -> {
+        userPage.getRecords().forEach(user -> {
             User safeUser = userService.safaUser(user);
             list.add(safeUser);
         });
+        //从数据库读取数据后，再写入缓存，记得写缓存过期时间
+        try {
+            valueOperations.set(redisKey, userPage, 300000, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.error("redis set key error", e);
+        }
+        return ResultUtils.success(userPage);
 
-        return ResultUtils.success(list);
     }
 
 
@@ -175,7 +195,7 @@ public class UserController {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         Long currentUserId = currentUser.getId();
-        //todo 校验用户是否合法
+
         User user = userService.getById(currentUserId);
         User safaUser = userService.safaUser(user);
         return ResultUtils.success(safaUser);

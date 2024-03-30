@@ -6,7 +6,12 @@ import com.itzkz.usercenter.service.UserService;
 import org.apache.tomcat.util.threads.ThreadPoolExecutor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.redisson.Redisson;
+import org.redisson.api.RList;
+import org.redisson.client.RedisClientConfig;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
@@ -23,6 +28,11 @@ import java.util.concurrent.TimeUnit;
 class UserCenterApplicationTests {
     @Resource
     private UserService userService;
+
+    @Resource
+    private Redisson redisson;
+    @Resource
+    private RedisTemplate redisTemplate;
 
 
     @Test
@@ -154,7 +164,7 @@ class UserCenterApplicationTests {
 
     private ExecutorService executorService = new ThreadPoolExecutor
             (40, 1000, 10000,
-            TimeUnit.MINUTES, new ArrayBlockingQueue<>(10000));
+                    TimeUnit.MINUTES, new ArrayBlockingQueue<>(10000));
 
     /**
      * 并发批量插入用户
@@ -164,7 +174,7 @@ class UserCenterApplicationTests {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 //分10组
-        int batchSize = 5000;
+        int batchSize = 50000;
         int j = 0;
         List<CompletableFuture<Void>> futureList = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
@@ -198,6 +208,41 @@ class UserCenterApplicationTests {
         System.out.println(stopWatch.getTotalTimeMillis());
     }
 
+
+    /**
+     * 使用redis进行crud
+     */
+    @Test
+    public void testRedisCrud() {
+    /*
+      增
+     */
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        valueOperations.set("name", "zkz");
+        valueOperations.set("age", 20);
+        valueOperations.set("tall", 173.1);
+        User user = new User();
+        user.setId(10L);
+        user.setProfile("sing,rap, basketball");
+        valueOperations.set("user", user);
+
+    /*
+      查
+     */
+
+        Object name = valueOperations.get("name");
+        Object age = valueOperations.get("age");
+        Object tall = valueOperations.get("tall");
+        Object user1 = valueOperations.get("user");
+
+
+        Assert.equals(name, "zkz");
+        Assert.equals(age, 20);
+        Assert.equals(tall, 173.1);
+        System.out.println(user1);
+
+
+    }
 
 }
 
