@@ -244,6 +244,16 @@ class UserCenterApplicationTests {
 
     }
 
+
+    @Test
+    public void testRedisson(){
+
+        RList<Object> list = redisson.getList("xiaxiang:redisson:key");
+
+//        list.add("zkz");
+        System.out.println(list.get(0));
+        list.remove(0);
+    }
 }
 
 
