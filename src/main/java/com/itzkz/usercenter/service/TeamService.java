@@ -1,8 +1,15 @@
 package com.itzkz.usercenter.service;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.itzkz.usercenter.model.domain.Team;
+import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.model.dto.TeamQueryDTO;
+import com.itzkz.usercenter.model.dto.TeamUpdateDTO;
+import com.itzkz.usercenter.model.vo.TeamUserVO;
+
+import java.util.List;
 
 /**
 * @author Aaaaaaa
@@ -11,4 +18,11 @@ import com.itzkz.usercenter.model.domain.Team;
 */
 public interface TeamService extends IService<Team> {
 
+    long addTeam(Team team , User loginUser);
+
+
+    List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin);
+
+
+    boolean updateTeam(TeamUpdateDTO teamUpdateDTO,User loginUser);
 }

@@ -7,14 +7,18 @@ import com.itzkz.usercenter.common.ErrorCode;
 import com.itzkz.usercenter.common.ResultUtils;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.model.domain.Team;
+import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.dto.TeamQueryDTO;
 import com.itzkz.usercenter.model.dto.TeamUpdateDTO;
+import com.itzkz.usercenter.model.vo.TeamUserVO;
 import com.itzkz.usercenter.service.TeamService;
+import com.itzkz.usercenter.service.UserService;
 import io.swagger.annotations.Api;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -25,6 +29,8 @@ public class TeamController {
 
     @Resource
     private TeamService teamService;
+    @Resource
+    private UserService userService;
 
     /**
      * 添加组队
@@ -33,16 +39,16 @@ public class TeamController {
      * @return 统一响应类
      */
     @PostMapping("/add")
-    public BaseResponse<Long> addTeam(@RequestBody Team team) {
-        if (team == null) {
+    public BaseResponse<Long> addTeam(@RequestBody Team team, HttpServletRequest request) {
+        if (team == null || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-
-        boolean result = teamService.save(team);
-        if (!result) {
+        User loginUser = userService.getLoginUser(request);
+        long result = teamService.addTeam(team, loginUser);
+        if (result <= 0) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
-        return ResultUtils.success(team.getId());
+        return ResultUtils.success(result);
     }
 
     /**
@@ -71,14 +77,15 @@ public class TeamController {
      * @return 统一响应类
      */
     @PostMapping("/update")
-    public BaseResponse<Boolean> addTeam(@RequestBody TeamUpdateDTO teamUpdateDTO) {
-        if (teamUpdateDTO == null) {
+    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateDTO teamUpdateDTO,HttpServletRequest request) {
+        if (teamUpdateDTO == null||request ==null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        Team team = new Team();
-        BeanUtils.copyProperties(teamUpdateDTO, team);
-        LambdaQueryWrapper<Team> queryWrapper = new LambdaQueryWrapper<>();
-        boolean result = teamService.update(team, queryWrapper);
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser ==null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        boolean result = teamService.updateTeam(teamUpdateDTO,loginUser);
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
@@ -98,7 +105,7 @@ public class TeamController {
         }
         Team team = teamService.getById(id);
         if (team == null) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"未查到该用户");
         }
         return ResultUtils.success(team);
     }
@@ -110,14 +117,12 @@ public class TeamController {
      * @return 统一响应类
      */
     @GetMapping("/list")
-    public BaseResponse<List<Team>> listTeam(@RequestBody TeamQueryDTO teamQuery) {
-        if (teamQuery == null) {
+    public BaseResponse<List<TeamUserVO>> listTeams(TeamQueryDTO teamQuery, HttpServletRequest request) {
+        if (teamQuery == null || request ==null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        Team team = new Team();
-        BeanUtils.copyProperties(teamQuery, team);
-        LambdaQueryWrapper<Team> queryWrapper = new LambdaQueryWrapper<>(team);
-        List<Team> teamList = teamService.list(queryWrapper);
+        boolean isAdmin  = userService.isAdmin(request);
+        List<TeamUserVO> teamList = teamService.listTeam(teamQuery,isAdmin);
 
         return ResultUtils.success(teamList);
     }
@@ -141,5 +146,11 @@ public class TeamController {
 
         return ResultUtils.success(resultPage);
     }
+
+
+
+
+
+
 
 }

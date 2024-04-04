@@ -33,6 +33,11 @@ public class TeamQueryDTO extends ResultPage {
     private Integer maxnum;
 
     /**
+     * 创建人id
+     */
+    private Long userId;
+
+    /**
      * 过期时间
      */
     private Date expiretime;

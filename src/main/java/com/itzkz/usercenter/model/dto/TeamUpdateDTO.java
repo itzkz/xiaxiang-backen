@@ -6,6 +6,11 @@ import java.util.Date;
 
 @Data
 public class TeamUpdateDTO {
+
+    /**
+     * 队伍id
+     */
+    private long id;
     /**
      * 队伍名称
      */
