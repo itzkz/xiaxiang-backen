@@ -1,6 +1,5 @@
 package com.itzkz.usercenter.service.impl;
 
-
 import cn.hutool.core.date.DateTime;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -13,6 +12,7 @@ import com.itzkz.usercenter.mapper.UserMapper;
 import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.domain.UserTeam;
+import com.itzkz.usercenter.model.dto.JoinTeamDTO;
 import com.itzkz.usercenter.model.dto.TeamQueryDTO;
 import com.itzkz.usercenter.model.dto.TeamUpdateDTO;
 import com.itzkz.usercenter.model.vo.TeamUserVO;
@@ -126,7 +126,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
         long id = teamUpdateDTO.getId();
         // 获取待更新的团队信息
-        if (id<=0){
+        if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         Team oldTeam = this.getById(id);
@@ -160,8 +160,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         UpdateWrapper<Team> updateWrapper = new UpdateWrapper<>();
         // 如果团队状态从私有变为公有，则清空密码字段
         if (statusEnums == TeamStatusEnums.PUBLIC) {
-            if(StringUtils.isNotBlank(teamUpdateDTO.getPassword())){
-                throw new BusinessException(ErrorCode.PARAMS_ERROR,"房间公开状态不允许设置密码");
+            if (StringUtils.isNotBlank(teamUpdateDTO.getPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "房间公开状态不允许设置密码");
             }
             String password = oldTeam.getPassword();
             if (StringUtils.isNotBlank(password)) {
@@ -175,6 +175,79 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
+
+        return true;
+    }
+
+    @Override
+    public boolean joinTeam(JoinTeamDTO joinTeamDTO, User loginUser) {
+        if (joinTeamDTO == null || loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //判断用户不能超过加入队伍上限
+        Long userId = loginUser.getId();
+        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserTeam::getUserid, userId);
+        long userJoinTeamNum = userTeamService.count(queryWrapper);
+        if (userJoinTeamNum < 0 || userJoinTeamNum >= 5) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已超过最大限制房间数");
+        }
+        //判断房间是否存在
+        long id = joinTeamDTO.getId();
+        Team team = this.getById(id);
+        //如果不存在
+        if (team == null || id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "房间不存在");
+        }
+        //如果存在只能加入未过期的队伍
+        Date expiretime = team.getExpiretime();
+        if (!(expiretime == null) && expiretime.before(DateTime.now())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已过期，禁止加入");
+        }
+
+        //如果存在只能加入未满人数的队伍
+
+        Long teamId = team.getId();
+        queryWrapper.eq(UserTeam::getTeamid, teamId);
+        long teamHasUserNum = userTeamService.count(queryWrapper);
+        if (teamHasUserNum < 0 || teamHasUserNum >= 5) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍人数已满");
+        }
+
+        //禁止加入私人队伍
+
+        Integer status = team.getStatus();
+        TeamStatusEnums statusEnums = TeamStatusEnums.getTeamStatusEnumByValue(status);
+        if (statusEnums == TeamStatusEnums.PRIVATE) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "禁止加入私密队伍");
+        }
+
+        //加入加密房间需要密码正确
+        if (statusEnums == TeamStatusEnums.SECRET) {
+            if (StringUtils.isBlank(joinTeamDTO.getPassword()) || !joinTeamDTO.getPassword().equals(team.getPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "输入密码有误,请重试");
+            }
+        }
+
+
+        //禁止加入已加入的队伍
+        queryWrapper.eq(UserTeam::getTeamid, teamId).
+                eq(UserTeam::getUserid, userId);
+        UserTeam hasUserJoinTeam = userTeamService.getOne(queryWrapper);
+        if (hasUserJoinTeam != null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "不能重复加入队伍");
+        }
+
+        //新增队伍 - 用户关联信息
+        UserTeam userTeam = new UserTeam();
+        userTeam.setUserid(userId);
+        userTeam.setTeamid(teamId);
+        userTeam.setJointime(new Date());
+        boolean result = userTeamService.save(userTeam);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+
 
         return true;
     }

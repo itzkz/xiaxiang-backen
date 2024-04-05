@@ -8,6 +8,7 @@ import com.itzkz.usercenter.common.ResultUtils;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.model.dto.JoinTeamDTO;
 import com.itzkz.usercenter.model.dto.TeamQueryDTO;
 import com.itzkz.usercenter.model.dto.TeamUpdateDTO;
 import com.itzkz.usercenter.model.vo.TeamUserVO;
@@ -77,15 +78,15 @@ public class TeamController {
      * @return 统一响应类
      */
     @PostMapping("/update")
-    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateDTO teamUpdateDTO,HttpServletRequest request) {
-        if (teamUpdateDTO == null||request ==null) {
+    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateDTO teamUpdateDTO, HttpServletRequest request) {
+        if (teamUpdateDTO == null || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        if (loginUser ==null){
+        if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
-        boolean result = teamService.updateTeam(teamUpdateDTO,loginUser);
+        boolean result = teamService.updateTeam(teamUpdateDTO, loginUser);
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
@@ -105,7 +106,7 @@ public class TeamController {
         }
         Team team = teamService.getById(id);
         if (team == null) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"未查到该用户");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "未查到该用户");
         }
         return ResultUtils.success(team);
     }
@@ -118,11 +119,11 @@ public class TeamController {
      */
     @GetMapping("/list")
     public BaseResponse<List<TeamUserVO>> listTeams(TeamQueryDTO teamQuery, HttpServletRequest request) {
-        if (teamQuery == null || request ==null) {
+        if (teamQuery == null || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean isAdmin  = userService.isAdmin(request);
-        List<TeamUserVO> teamList = teamService.listTeam(teamQuery,isAdmin);
+        boolean isAdmin = userService.isAdmin(request);
+        List<TeamUserVO> teamList = teamService.listTeam(teamQuery, isAdmin);
 
         return ResultUtils.success(teamList);
     }
@@ -147,10 +148,23 @@ public class TeamController {
         return ResultUtils.success(resultPage);
     }
 
+    /**
+     * 用户加入队伍
+     *
+     * @param joinTeamDTO 加入条件对象,用户指定加入队伍参数
+     * @param request     请求
+     * @return 统一响应类
+     */
 
+    @PostMapping("/join")
+    public BaseResponse<Boolean> joinTeam(@RequestBody JoinTeamDTO joinTeamDTO, HttpServletRequest request) {
+        if (joinTeamDTO == null || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(teamService.joinTeam(joinTeamDTO, loginUser));
 
-
-
+    }
 
 
 }
