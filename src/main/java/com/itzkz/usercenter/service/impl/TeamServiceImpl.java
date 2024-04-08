@@ -43,6 +43,13 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     @Resource
     private UserService userService;
 
+    /**
+     * 增加队伍
+     *
+     * @param team      队伍对象
+     * @param loginUser 登录用户
+     * @return
+     */
     @Override
     @Transactional
     public long addTeam(Team team, User loginUser) {
@@ -118,8 +125,15 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return team.getId();
     }
 
-
+    /**
+     * 更新队伍
+     *
+     * @param teamUpdateDTO 更新队伍参数对象
+     * @param loginUser     登录用户
+     * @return
+     */
     @Override
+    @Transactional
     public boolean updateTeam(TeamUpdateDTO teamUpdateDTO, User loginUser) {
         if (teamUpdateDTO == null || loginUser == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -179,7 +193,15 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return true;
     }
 
+    /**
+     * 用户加入队伍
+     *
+     * @param joinTeamDTO 加入队伍参数对象
+     * @param loginUser   登录用户
+     * @return
+     */
     @Override
+    @Transactional
     public boolean joinTeam(JoinTeamDTO joinTeamDTO, User loginUser) {
         if (joinTeamDTO == null || loginUser == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -252,7 +274,102 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return true;
     }
 
+    /**
+     * 退出队伍
+     *
+     * @param teamId    队伍id
+     * @param loginUser 登录用户
+     * @return
+     */
+    @Override
+    @Transactional
+    public boolean quitTeam(Long teamId, User loginUser) {
+        if (teamId <= 0 || loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
 
+        Team team = this.getById(teamId);
+        if (team == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "房间不存在");
+        }
+
+        // 查询房间的人数
+        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserTeam::getTeamid, teamId);
+        long teamUserCount = userTeamService.count(queryWrapper);
+
+        if (teamUserCount == 1) {
+            // 如果房间只有一个人，直接移除
+            return this.removeById(teamId);
+        } else {
+            if (Objects.equals(team.getUserid(), loginUser.getId())) {
+                // 如果当前用户是队长，找到下一个队长并转让队长职责
+                LambdaQueryWrapper<UserTeam> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+                teamLambdaQueryWrapper.eq(UserTeam::getTeamid, teamId);
+                //下一个队长对象
+                UserTeam nextLeader = userTeamService.getOne(queryWrapper.orderByAsc(UserTeam::getId).last("LIMIT 1 OFFSET 1"));
+                //转移队长
+                if (nextLeader != null) {
+                    team.setUserid(nextLeader.getUserid());
+                    this.updateById(team);
+                } else {
+                    // 没有找到下一个队长，则可能是出现了异常情况
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "未找到下一个队长");
+                }
+            }
+
+            // 移除队伍用户关系
+            queryWrapper.clear();
+            queryWrapper.eq(UserTeam::getUserid, loginUser.getId()).eq(UserTeam::getTeamid, teamId);
+            return userTeamService.remove(queryWrapper);
+        }
+    }
+
+    /**
+     * 解散队伍
+     *
+     * @param id        队伍id
+     * @param loginUser
+     * @return
+     */
+    @Override
+    @Transactional
+    public boolean dismissTeam(long id, User loginUser) {
+        // 校验请求参数
+        if (id <= 0 || loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //校验队伍是否存在
+        Team team = this.getById(id);
+        if (team == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍不存在");
+        }
+        //校验你是不是队伍的队长
+        if (!team.getUserid().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH, "不是队长 不允许解散队伍");
+        }
+        //删除队伍
+        boolean result = this.removeById(id);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "解散房间失败");
+        }
+        //移除所有加入队伍的关联信息
+        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserTeam::getTeamid, id);
+        result = userTeamService.remove(queryWrapper);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除队伍用户信息失败");
+        }
+        return true;
+    }
+
+    /**
+     * 查询队伍信息
+     *
+     * @param teamQuery 查询队伍参数对象
+     * @param isAdmin   是否为管理员
+     * @return
+     */
     @Override
     public List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin) {
         LambdaQueryWrapper<Team> queryWrapper = new LambdaQueryWrapper<>();

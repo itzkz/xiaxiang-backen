@@ -167,4 +167,44 @@ public class TeamController {
     }
 
 
+    /**
+     * 用户退出队伍
+     *
+     * @param teamId  队伍id
+     * @param request 请求
+     * @return 统一响应类
+     */
+
+    @PostMapping("/quit")
+    public BaseResponse<Boolean> quitTeam(Long teamId, HttpServletRequest request) {
+        if (teamId == null || teamId <= 0 || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(teamService.quitTeam(teamId, loginUser));
+
+    }
+
+
+    /**
+     * 解散队伍
+     *
+     * @param id 队伍id
+     * @return 统一响应类
+     */
+    @PostMapping("/delete")
+    public BaseResponse<Boolean> dismissTeam(long id, HttpServletRequest request) {
+        if (id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        boolean result = teamService.dismissTeam(id, loginUser);
+
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+        return ResultUtils.success(true);
+    }
+
+
 }
