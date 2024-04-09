@@ -63,5 +63,19 @@ public interface TeamService extends IService<Team> {
      * @param id 队伍id
      * @return boolean
      */
-    boolean dismissTeam(long id,User loginUser);
+    boolean deleteTeam(long id,User loginUser);
+
+    /**
+     * 查询自己创建的队伍列表信息
+     * @param loginUser 登录用户
+     * @return 封装队伍信息对象
+     */
+    List<TeamUserVO> myCreateTeamsList( User loginUser);
+
+    /**
+     * 查询自己加入的所有队伍列表信息
+     * @param loginUser 登录用户
+     * @return 封装队伍信息对象
+     */
+    List<TeamUserVO> myJoinTeamsList(User loginUser);
 }

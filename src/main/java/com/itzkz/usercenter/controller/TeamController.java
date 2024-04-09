@@ -53,24 +53,24 @@ public class TeamController {
     }
 
     /**
-     * 删除队伍
+     * 解散队伍
      *
      * @param id 队伍id
      * @return 统一响应类
      */
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteTeam(long id) {
+    public BaseResponse<Boolean> deleteTeam(long id, HttpServletRequest request) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean result = teamService.removeById(id);
+        User loginUser = userService.getLoginUser(request);
+        boolean result = teamService.deleteTeam(id, loginUser);
 
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
         return ResultUtils.success(true);
     }
-
     /**
      * 更新队伍
      *
@@ -125,6 +125,37 @@ public class TeamController {
         boolean isAdmin = userService.isAdmin(request);
         List<TeamUserVO> teamList = teamService.listTeam(teamQuery, isAdmin);
 
+        return ResultUtils.success(teamList);
+    }
+    /**
+     * 查询自己创建的队伍信息
+     *
+     * @param request 请求
+     * @return 统一响应类
+     */
+    @GetMapping("/list/my/create")
+    public BaseResponse<List<TeamUserVO>> myCreateTeamsList(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        List<TeamUserVO> teamList = teamService.myCreateTeamsList(loginUser);
+        return ResultUtils.success(teamList);
+    }
+
+    /**
+     * 查询自己加入的所有队伍信息
+     *
+     * @param request 请求
+     * @return 统一响应类
+     */
+    @GetMapping("/list/my/join")
+    public BaseResponse<List<TeamUserVO>> myJoinTeamsList(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        List<TeamUserVO> teamList = teamService.myJoinTeamsList(loginUser);
         return ResultUtils.success(teamList);
     }
 
@@ -186,25 +217,6 @@ public class TeamController {
     }
 
 
-    /**
-     * 解散队伍
-     *
-     * @param id 队伍id
-     * @return 统一响应类
-     */
-    @PostMapping("/delete")
-    public BaseResponse<Boolean> dismissTeam(long id, HttpServletRequest request) {
-        if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        User loginUser = userService.getLoginUser(request);
-        boolean result = teamService.dismissTeam(id, loginUser);
-
-        if (!result) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
-        }
-        return ResultUtils.success(true);
-    }
 
 
 }

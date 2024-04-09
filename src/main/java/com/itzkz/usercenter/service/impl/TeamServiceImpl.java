@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Aaaaaaa
@@ -329,12 +330,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
      * 解散队伍
      *
      * @param id        队伍id
-     * @param loginUser
+     * @param loginUser 登录用户
      * @return
      */
     @Override
     @Transactional
-    public boolean dismissTeam(long id, User loginUser) {
+    public boolean deleteTeam(long id, User loginUser) {
         // 校验请求参数
         if (id <= 0 || loginUser == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -364,11 +365,44 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     /**
+     * 查询自己创建的队伍列表信息
+     *
+     * @param loginUser 登录用户
+     * @return 封装队伍信息对象
+     */
+    @Override
+    public List<TeamUserVO> myCreateTeamsList(User loginUser) {
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        List<Team> teamList = lambdaQuery().eq(Team::getUserid, loginUser.getId()).list();
+        return getTeamUserVOS(teamList);
+    }
+
+    /**
+     * 查询自己加入的所有队伍列表信息
+     *
+     * @param loginUser 登录用户
+     * @return 封装队伍信息对象
+     */
+    @Override
+    public List<TeamUserVO> myJoinTeamsList(User loginUser) {
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+        List<Long> teamIdList = userTeamService.list(queryWrapper.eq(UserTeam::getUserid, loginUser.getId())).stream().map(UserTeam::getTeamid).collect(Collectors.toList());
+        List<Team> teamList = lambdaQuery().in(Team::getId, teamIdList).list();
+        return getTeamUserVOS(teamList);
+
+    }
+
+    /**
      * 查询队伍信息
      *
      * @param teamQuery 查询队伍参数对象
      * @param isAdmin   是否为管理员
-     * @return
+     * @return 封装队伍信息对象
      */
     @Override
     public List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin) {
@@ -399,16 +433,15 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             if (userId != null && userId > 0) {
                 queryWrapper.eq(Team::getUserid, userId);
             }
-            //根据队伍状态来查询
+//            //根据队伍状态来查询
             Integer status = teamQuery.getStatus();
             TeamStatusEnums statusEnums = TeamStatusEnums.getTeamStatusEnumByValue(status);
             if (statusEnums == null) {
-                statusEnums = TeamStatusEnums.PUBLIC;
+                queryWrapper.and(q -> q.eq(Team::getStatus, TeamStatusEnums.PUBLIC.getValue()).or().eq(Team::getStatus, TeamStatusEnums.SECRET.getValue()));
             }
-            if (!isAdmin && statusEnums != TeamStatusEnums.PUBLIC) {
+            if (!isAdmin && statusEnums == TeamStatusEnums.PRIVATE) {
                 throw new BusinessException(ErrorCode.NO_AUTH);
             }
-            queryWrapper.eq(Team::getStatus, statusEnums.getValue());
 
             //根据过期时间查询
             Date expiretime = teamQuery.getExpiretime();
@@ -422,6 +455,16 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
         // 查询队伍和已加入队伍成员的信息
         List<Team> teamList = this.list(queryWrapper);
+        return getTeamUserVOS(teamList);
+    }
+
+    /**
+     * 在队伍中的用户
+     *
+     * @param teamList 队伍列表
+     * @return
+     */
+    private ArrayList<TeamUserVO> getTeamUserVOS(List<Team> teamList) {
         if (teamList == null) {
             return new ArrayList<>();
         }
