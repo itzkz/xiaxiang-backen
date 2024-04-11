@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 @Data
-public class JoinTeamDTO implements Serializable {
+public class QuitTeamDTO implements Serializable {
 
     private static final long serialVersionUID = 8683322055289518279L;
 
@@ -15,10 +15,6 @@ public class JoinTeamDTO implements Serializable {
     private long teamid;
 
 
-    /**
-     * 房间密码
-     */
-    private String password;
 
 
 

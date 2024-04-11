@@ -216,7 +216,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "已超过最大限制房间数");
         }
         //判断房间是否存在
-        long id = joinTeamDTO.getId();
+        long id = joinTeamDTO.getTeamid();
         Team team = this.getById(id);
         //如果不存在
         if (team == null || id <= 0) {
@@ -422,6 +422,11 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             String description = teamQuery.getDescription();
             if (StringUtils.isNotBlank(description)) {
                 queryWrapper.like(Team::getDescription, description);
+            }
+            //根据队伍名称和描述查询
+            String searchText = teamQuery.getSearchText();
+            if (StringUtils.isNotBlank(searchText)){
+                queryWrapper.and(q->q.like(Team::getName, searchText).or().like(Team::getDescription, searchText));
             }
             //根据队伍最大人数查询
             Integer maxNum = teamQuery.getMaxnum();

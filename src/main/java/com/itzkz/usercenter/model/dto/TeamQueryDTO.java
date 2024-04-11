@@ -38,6 +38,12 @@ public class TeamQueryDTO extends ResultPage {
     private Long userId;
 
     /**
+     * 搜素词
+     */
+    private String searchText;
+
+
+    /**
      * 过期时间
      */
     private Date expiretime;

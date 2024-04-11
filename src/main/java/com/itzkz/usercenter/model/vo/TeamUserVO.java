@@ -47,11 +47,11 @@ public class TeamUserVO implements Serializable {
     /**
      * 创建时间
      */
-    private Date createTime;
+    private Date createtime;
     /**
      * 更新时间
      */
-    private Date updateTime;
+    private Date updatetime;
     /**
      * 队伍创建人信息
      */

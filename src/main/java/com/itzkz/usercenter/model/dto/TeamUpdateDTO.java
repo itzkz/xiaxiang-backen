@@ -1,5 +1,6 @@
 package com.itzkz.usercenter.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.util.Date;
@@ -29,6 +30,7 @@ public class TeamUpdateDTO {
     /**
      * 过期时间
      */
+    @JsonFormat(pattern = "yyyy/MM/dd")
     private Date expiretime;
 
     /**

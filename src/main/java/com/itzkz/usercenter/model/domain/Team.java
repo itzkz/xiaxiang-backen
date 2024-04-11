@@ -1,6 +1,7 @@
 package com.itzkz.usercenter.model.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -37,6 +38,7 @@ public class Team implements Serializable {
     /**
      * 过期时间
      */
+    @JsonFormat(pattern = "yyyy/MM/dd")
     private Date expiretime;
 
     /**
