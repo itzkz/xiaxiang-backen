@@ -5,7 +5,6 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 
 @Data
 public class TeamUserVO implements Serializable {
@@ -53,7 +52,7 @@ public class TeamUserVO implements Serializable {
      */
     private Date updatetime;
     /**
-     * 队伍创建人信息
+     * 队伍中用户信息
      */
     HashSet<UserVO> joinTeamUser;
 

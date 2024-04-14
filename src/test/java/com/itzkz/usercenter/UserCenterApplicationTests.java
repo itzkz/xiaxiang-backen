@@ -1,28 +1,28 @@
 package com.itzkz.usercenter;
 
 import cn.hutool.core.lang.Assert;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.service.UserService;
+import com.itzkz.usercenter.tools.GenerateRecommendations;
 import org.apache.tomcat.util.threads.ThreadPoolExecutor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.redisson.Redisson;
 import org.redisson.api.RList;
-import org.redisson.client.RedisClientConfig;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+
 
 @SpringBootTest
 class UserCenterApplicationTests {
@@ -246,7 +246,7 @@ class UserCenterApplicationTests {
 
 
     @Test
-    public void testRedisson(){
+    public void testRedisson() {
 
         RList<Object> list = redisson.getList("xiaxiang:redisson:key");
 
@@ -254,6 +254,71 @@ class UserCenterApplicationTests {
         System.out.println(list.get(0));
         list.remove(0);
     }
+
+
+    @Test
+    public void testGenerateRecommendations() {
+        // 创建模拟用户数据
+//        List<User> users = new ArrayList<>();
+        List<Integer> teamIdList = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(User::getId,teamIdList);
+        queryWrapper.select(User::getId,User::getTags);
+        List<User> users = userService.list(queryWrapper);
+//        // 用户1
+//        User user1 = new User();
+//        user1.setId(1L);
+//        user1.setTags("Java, xxxx, Hibernate");
+//        users.add(user1);
+//
+//        // 用户2
+//        User user2 = new User();
+//        user2.setId(2L);
+//        user2.setTags("Python, Django, Flask");
+//        users.add(user2);
+//
+//        // 用户3
+//        User user3 = new User();
+//        user3.setId(3L);
+//        user3.setTags("Java, Spring, Maven");
+//        users.add(user3);
+//
+//        // 用户4
+//        User user4 = new User();
+//        user4.setId(4L);
+//        user4.setTags("JavaScript, React, Node.js");
+//        users.add(user4);
+//
+//        // 用户5
+//        User user5 = new User();
+//        user5.setId(5L);
+//        user5.setTags("C++, OpenGL, Unity");
+//        users.add(user5);
+//
+//        // 用户6
+//        User user6 = new User();
+//        user6.setId(6L);
+//        user6.setTags("Python, Data Science, Machine Learning");
+//        users.add(user6);
+
+        // 创建目标用户
+        User targetUser =userService.getById(3);
+      // 假设目标用户ID为3
+
+
+        // 生成推荐列表
+        GenerateRecommendations generateRecommendations = new GenerateRecommendations();
+        List<User> userList = generateRecommendations.generateRecommendations(targetUser,users,5);
+        // 输出推荐列表
+        for (User user : userList) {
+            System.out.println("用户 " + user.getId());
+        }
+    }
 }
+
+
+
+
+
 
 

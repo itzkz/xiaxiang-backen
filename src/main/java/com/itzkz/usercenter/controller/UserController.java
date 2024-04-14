@@ -160,6 +160,21 @@ public class UserController {
 
     }
 
+    /**
+     * 根据当前用户匹配相似用户
+     *
+     * @return 统一响应类
+     */
+    @GetMapping("/match")
+    public BaseResponse<List<User>> matchUsers(HttpServletRequest request, int num) {
+        if (request == null || num < 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        List<User> teamList = userService.matchUser(loginUser, num);
+
+        return ResultUtils.success(teamList);
+    }
 
     /**
      * 删除用户

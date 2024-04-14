@@ -11,13 +11,12 @@ import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.mapper.UserMapper;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.service.UserService;
+import com.itzkz.usercenter.tools.GenerateRecommendations;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -272,8 +271,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //提取公共部分
         Long userId = user.getId();
         if (userId <= 0) {
-                throw new BusinessException(ErrorCode.NOT_LOGIN);
-            }
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
         User oldUser = this.getById(userId);
         if (oldUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
@@ -300,7 +299,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 //        }
 //        return this.updateById(user);
 
-       //优化逻辑
+        //优化逻辑
         if (!isAdmin(loginUser) && !Objects.equals(userId, loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH);
         }
@@ -333,6 +332,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         return loginUser.getUserrole() == UserConstant.USER_ADMIN;
+    }
+
+    /**
+     * 根据当前用户匹配相似用户
+     *
+     * @param loginUser 当前用户
+     * @param num       匹配用户的数量
+     * @return 用户列表
+     */
+    @Override
+    public List<User> matchUser(User loginUser, Integer num) {
+        if (num < 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //调用自己定义的生成用户方法
+        GenerateRecommendations recommendations = new GenerateRecommendations();
+        //只取出用户id和用户标签不为空的字段
+        List<User> userList = lambdaQuery().select(User::getId, User::getTags).isNotNull(User::getTags).list();
+        //获取到了匹配后的用户列表
+        List<User> matchUserList = recommendations.generateRecommendations(loginUser, userList, num);
+        //根据用户id进行分组
+        Map<Long, List<User>> longListMap = matchUserList.stream().collect(Collectors.groupingBy(User::getId));
+        //拿到匹配的用户id列表
+        List<Long> matchUserIdList = matchUserList.stream().map(User::getId).collect(Collectors.toList());
+        //根据id去查询匹配用户的完整数据
+        List<User> finalUser = lambdaQuery().in(User::getId, matchUserIdList).list();
+        // 将用户脱敏
+        List<User> safeUserList = finalUser.stream().peek(this::safaUser).collect(Collectors.toList());
+        //将脱敏用户放回已排序好的列表中
+        safeUserList.forEach(user -> {
+            List<User> userListWithSameId = longListMap.get(user.getId());
+            if (userListWithSameId != null && !userListWithSameId.isEmpty()) {
+                userListWithSameId.set(0, user);
+            }
+        });
+        //在根据上面id分组的map 进行提取已排序好的用户列表
+        ArrayList<User> finalMatchUserList = new ArrayList<>();
+        matchUserIdList.forEach(id -> {
+            List<User> users = longListMap.get(id);
+            finalMatchUserList.add(users.get(0));
+        });
+        return finalMatchUserList;
     }
 }
 

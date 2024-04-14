@@ -1,10 +1,8 @@
 package com.itzkz.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.model.domain.User;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
@@ -87,4 +85,11 @@ public interface UserService extends IService<User> {
      */
     boolean isAdmin(User loginUser);
 
+    /**
+     * 根据当前用户匹配相似用户
+     * @param loginUser 当前用户
+     * @param num
+     * @return 用户列表
+     */
+    List<User> matchUser(User loginUser,Integer num);
 }
