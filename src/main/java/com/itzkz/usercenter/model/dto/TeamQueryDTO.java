@@ -3,6 +3,7 @@ package com.itzkz.usercenter.model.dto;
 import com.itzkz.usercenter.common.ResultPage;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
@@ -46,7 +47,8 @@ public class TeamQueryDTO extends ResultPage {
     /**
      * 过期时间
      */
-    private Date expiretime;
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date expiretime =null;
 
     /**
      * 0 - 公开，1 - 私有，2 - 加密

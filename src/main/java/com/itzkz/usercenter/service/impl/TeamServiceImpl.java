@@ -94,6 +94,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码设置不正确");
             }
         }
+        //   5. 如果 status 是私密状态，不允许设置密码
+        if (statusEnums.equals(TeamStatusEnums.PRIVATE)) {
+            if (StringUtils.isNotBlank(password)) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "私密状态不允许设置密码");
+            }
+        }
         //   6. 超时时间 > 当前时间
         if (DateTime.now().isAfter(team.getExpiretime())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍已过期");
@@ -166,21 +172,24 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             statusEnums = TeamStatusEnums.PUBLIC;
         }
 
-        // 如果团队状态为私有，则必须设置密码
-        if (TeamStatusEnums.PRIVATE.equals(statusEnums)) {
+        // 如果团队状态为加密，则必须设置密码
+        if (TeamStatusEnums.SECRET.equals(statusEnums)) {
             if (StringUtils.isBlank(teamUpdateDTO.getPassword())) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "请设置房间密码");
             }
         }
         UpdateWrapper<Team> updateWrapper = new UpdateWrapper<>();
-        // 如果团队状态从私有变为公有，则清空密码字段
+        // 如果团队状态从加密变为公有，则清空密码字段
         if (statusEnums == TeamStatusEnums.PUBLIC) {
             if (StringUtils.isNotBlank(teamUpdateDTO.getPassword())) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "房间公开状态不允许设置密码");
             }
+            //todo 清空密码会将所有的都清空 bug
             String password = oldTeam.getPassword();
             if (StringUtils.isNotBlank(password)) {
                 updateWrapper.set("password", "");
+                updateWrapper.eq("id",id);
+                this.update(oldTeam,updateWrapper);
             }
         }
         // 将团队更新DTO转换为团队对象，并执行更新操作
