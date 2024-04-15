@@ -184,7 +184,6 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             if (StringUtils.isNotBlank(teamUpdateDTO.getPassword())) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "房间公开状态不允许设置密码");
             }
-            //todo 清空密码会将所有的都清空 bug
             String password = oldTeam.getPassword();
             if (StringUtils.isNotBlank(password)) {
                 updateWrapper.set("password", "");
