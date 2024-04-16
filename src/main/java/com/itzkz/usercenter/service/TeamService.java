@@ -1,7 +1,6 @@
 package com.itzkz.usercenter.service;
 
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
@@ -30,9 +29,10 @@ public interface TeamService extends IService<Team> {
      * 查询队伍
      * @param teamQuery 查询队伍参数对象
      * @param isAdmin 是否为管理员
+     * @param loginUser
      * @return 返回封装对象列表
      */
-    List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin);
+    List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin,User loginUser);
 
     /**
      * 更新队伍信息

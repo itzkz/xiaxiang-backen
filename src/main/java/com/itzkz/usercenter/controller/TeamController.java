@@ -121,7 +121,8 @@ public class TeamController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         boolean isAdmin = userService.isAdmin(request);
-        List<TeamUserVO> teamList = teamService.listTeam(teamQuery, isAdmin);
+        User loginUser = userService.getLoginUser(request);
+        List<TeamUserVO> teamList = teamService.listTeam(teamQuery, isAdmin,loginUser);
 
         return ResultUtils.success(teamList);
     }

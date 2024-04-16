@@ -187,8 +187,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             String password = oldTeam.getPassword();
             if (StringUtils.isNotBlank(password)) {
                 updateWrapper.set("password", "");
-                updateWrapper.eq("id",id);
-                this.update(oldTeam,updateWrapper);
+                updateWrapper.eq("id", id);
+                this.update(oldTeam, updateWrapper);
             }
         }
         // 将团队更新DTO转换为团队对象，并执行更新操作
@@ -410,10 +410,11 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
      *
      * @param teamQuery 查询队伍参数对象
      * @param isAdmin   是否为管理员
+     * @param loginUser
      * @return 封装队伍信息对象
      */
     @Override
-    public List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin) {
+    public List<TeamUserVO> listTeam(TeamQueryDTO teamQuery, Boolean isAdmin, User loginUser) {
         LambdaQueryWrapper<Team> queryWrapper = new LambdaQueryWrapper<>();
         if (teamQuery != null) {
             //根据队伍id查询
@@ -433,8 +434,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
             //根据队伍名称和描述查询
             String searchText = teamQuery.getSearchText();
-            if (StringUtils.isNotBlank(searchText)){
-                queryWrapper.and(q->q.like(Team::getName, searchText).or().like(Team::getDescription, searchText));
+            if (StringUtils.isNotBlank(searchText)) {
+                queryWrapper.and(q -> q.like(Team::getName, searchText).or().like(Team::getDescription, searchText));
             }
             //根据队伍最大人数查询
             Integer maxNum = teamQuery.getMaxnum();
@@ -452,8 +453,16 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             if (statusEnums == null) {
                 queryWrapper.and(q -> q.eq(Team::getStatus, TeamStatusEnums.PUBLIC.getValue()).or().eq(Team::getStatus, TeamStatusEnums.SECRET.getValue()));
             }
-            if (!isAdmin && statusEnums == TeamStatusEnums.PRIVATE) {
-                throw new BusinessException(ErrorCode.NO_AUTH);
+            //查询私密房间 只允许管理员 和本人可以查询
+            if (statusEnums == TeamStatusEnums.PRIVATE) {
+                //是否管理员
+                if (!isAdmin) {
+                    //是否本人
+                    if (!Objects.equals(teamQuery.getUserId(), loginUser.getId())) {
+                        throw new BusinessException(ErrorCode.NO_AUTH);
+                    }
+                }
+
             }
 
             //根据过期时间查询
