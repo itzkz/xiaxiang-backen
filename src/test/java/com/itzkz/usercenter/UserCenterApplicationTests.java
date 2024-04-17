@@ -314,6 +314,12 @@ class UserCenterApplicationTests {
             System.out.println("用户 " + user.getId());
         }
     }
+
+
+
+
+
+
 }
 
 

@@ -9,12 +9,15 @@ import com.itzkz.usercenter.common.ErrorCode;
 import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.mapper.UserMapper;
+import com.itzkz.usercenter.model.domain.Follow;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.service.FollowService;
 import com.itzkz.usercenter.service.UserService;
 import com.itzkz.usercenter.tools.GenerateRecommendations;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
 
+    @Resource
+    private FollowService followService;
 
     /**
      * 用户注册
@@ -35,7 +40,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param userAccount   用户账号
      * @param userPassword  用户密码
      * @param checkPassword 校验密码
-     * @return
+     * @return 用户id
      */
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -89,8 +94,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      *
      * @param userAccount  用户账号
      * @param userPassword 用户密码
-     * @param request
-     * @return
+     * @param request      请求
+     * @return 脱敏用户
      */
     @Override
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
@@ -140,8 +145,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     /**
      * 用户注销
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return 整形
      */
     @Override
     public int userLogout(HttpServletRequest request) {
@@ -156,7 +161,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * 用户脱敏
      *
      * @param user 用户
-     * @return
+     * @return 脱敏用户
      */
     @Override
     public User safaUser(User user) {
@@ -309,8 +314,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     /**
      * 校验是否为管理员
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return boolean
      */
     @Override
     public boolean isAdmin(HttpServletRequest request) {
@@ -375,5 +380,134 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         });
         return finalMatchUserList;
     }
+
+    /**
+     * 关注用户
+     *
+     * @param followId  被关注的用户id
+     * @param loginUser 登录用户
+     * @return boolean
+     */
+    @Override
+    public boolean followUser(long followId, User loginUser) {
+        //- 请求参数是否为空
+        if (followId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //- 是否登录 未登录不允许关注
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        //- 被关注的用户存在
+        User user = this.getById(followId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "您关注的用户不存在");
+        }
+        //不能关注自己
+        if (followId==loginUser.getId()){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"不能关注自己");
+        }
+        //- 插入关注关系表
+        Follow follow = new Follow();
+        follow.setFolloweruserid(loginUser.getId());
+        follow.setFolloweduserid(followId);
+        follow.setFollowtime(new Date());
+        boolean result = followService.save(follow);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+        return true;
+    }
+
+    /**
+     * 取关用户
+     *
+     * @param followId  被取关的用户id
+     * @param loginUser 登录用户
+     * @return boolean
+     */
+    @Override
+    public boolean discardUser(long followId, User loginUser) {
+        //- 请求参数是否为空
+        if (followId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //- 是否登录 未登录不允许取关
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        //- 被取关的用户存在
+        User user = this.getById(followId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "您关注的用户不存在");
+        }
+        //不能取关自己
+        if (followId==loginUser.getId()){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"不能取关自己");
+        }
+        //- 删除关注关系表
+        LambdaQueryWrapper<Follow> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Follow::getFolloweruserid, loginUser.getId()).eq(Follow::getFolloweduserid, followId);
+        boolean result = followService.remove(queryWrapper);
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+        return true;
+    }
+
+    /**
+     * 查询关注的所有用户列表
+     *
+     * @param loginUser 登录用户
+     * @return 关注的所有用户列表
+     */
+    @Override
+    public List<User> followListUser(User loginUser) {
+        return followOrFansListUser(loginUser, true);
+    }
+
+    /**
+     * 查询粉丝用户列表
+     *
+     * @param loginUser 登录用户
+     * @return 粉丝用户列表
+     */
+    @Override
+    public List<User> fansListUser(User loginUser) {
+        return followOrFansListUser(loginUser, false);
+    }
+
+
+    /**
+     * 查询关注或粉丝用户列表
+     *
+     * @param loginUser 登录用户
+     * @param isFollow  查询关注列表还是粉丝列表，true表示关注列表，false表示粉丝列表
+     * @return 关注或粉丝用户列表
+     */
+    private List<User> followOrFansListUser(User loginUser, boolean isFollow) {
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
+        }
+        //- 查询关注关系表  返回关注或粉丝列表用户id
+        LambdaQueryWrapper<Follow> queryWrapper = new LambdaQueryWrapper<>();
+        if (isFollow) {
+            queryWrapper.eq(Follow::getFolloweruserid, loginUser.getId());
+        } else {
+            queryWrapper.eq(Follow::getFolloweduserid, loginUser.getId());
+        }
+
+        List<Follow> followList = followService.list(queryWrapper);
+        //根据id去查询用户信息
+        List<Long> userIds = isFollow ?
+                followList.stream().map(Follow::getFolloweduserid).collect(Collectors.toList()) :
+                followList.stream().map(Follow::getFolloweruserid).collect(Collectors.toList());
+        if (userIds.isEmpty()){
+            return new ArrayList<>();
+        }
+        //- 查询关注或粉丝用户信息并且进行脱敏返回
+        return lambdaQuery().in(User::getId, userIds).list().stream().map(this::safaUser).collect(Collectors.toList());
+    }
 }
+
 

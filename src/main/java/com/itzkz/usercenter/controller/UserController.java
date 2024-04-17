@@ -251,5 +251,66 @@ public class UserController {
 
     }
 
+    /**
+     * 关注用户
+     * @param followId 被关注的用户id
+     * @param request 请求
+     * @return boolean
+     */
+    @PostMapping("/follow")
+    public BaseResponse<Boolean> followUser ( @RequestParam("followId") long followId, HttpServletRequest request) {
+
+        if (followId <=0 || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(userService.followUser(followId, loginUser));
+    }
+
+    /**
+     * 取关用户
+     * @param followId 被关注的用户id
+     * @param request 请求
+     * @return boolean
+     */
+    @PostMapping("/discard")
+    public BaseResponse<Boolean> discardUser ( @RequestParam("followId") long followId, HttpServletRequest request) {
+
+        if (followId <=0 || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(userService.discardUser(followId, loginUser));
+    }
+
+    /**
+     * 查询用户关注列表
+     * @param request 请求
+     * @return boolean
+     */
+    @GetMapping("/list/follow")
+    public BaseResponse<List<User>> followListUser( HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(userService.followListUser(loginUser));
+    }
+
+    /**
+     * 查询用户粉丝列表
+     * @param request 请求
+     * @return boolean
+     */
+    @GetMapping("/list/fans")
+    public BaseResponse<List<User>> fansListUser( HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(userService.fansListUser(loginUser));
+    }
+
+
 
 }
