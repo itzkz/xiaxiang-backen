@@ -2,6 +2,7 @@ package com.itzkz.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.model.vo.IsFollowVO;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -97,16 +98,16 @@ public interface UserService extends IService<User> {
      * 关注用户
      * @param followId 被关注的用户id
      * @param loginUser 登录用户
-     * @return boolean
+     * @return IsFollowVO 返回封装类
      */
-    boolean followUser(long followId, User loginUser);
+    IsFollowVO followUser(long followId, User loginUser);
     /**
      * 取关用户
      * @param followId 被取关的用户id
      * @param loginUser 登录用户
-     * @return boolean
+     * @return IsFollowVO 返回封装类
      */
-    boolean discardUser(long followId, User loginUser);
+    IsFollowVO discardUser(long followId, User loginUser);
 
     /**
      * 查询所有关注用户列表

@@ -8,8 +8,10 @@ import com.itzkz.usercenter.common.ResultUtils;
 import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.model.dto.FollowUserIdDTO;
 import com.itzkz.usercenter.model.request.UserLoginRequest;
 import com.itzkz.usercenter.model.request.UserRegisterRequest;
+import com.itzkz.usercenter.model.vo.IsFollowVO;
 import com.itzkz.usercenter.service.UserService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -69,14 +72,14 @@ public class UserController {
      */
 
     @PostMapping("/login")
-    public BaseResponse userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
+    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
         if (loginRequest == null) {
-            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String userAccount = loginRequest.getUserAccount();
         String userPassword = loginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User user = userService.userLogin(userAccount, userPassword, request);
         return ResultUtils.success(user);
@@ -98,7 +101,7 @@ public class UserController {
     }
 
     /**
-     * 用户查询
+     * 根据用户名查询用户
      *
      * @param username 用户名称
      * @param request  请求
@@ -134,12 +137,13 @@ public class UserController {
         if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
-        String redisKey = String.format("itzkz:recommend:%s", loginUser.getId());
+        String redisKey = String.format("itzkz:recommend:pageNum:%s", pageNum);
         //如果有缓存，直接从缓存中读取
         ValueOperations valueOperations = redisTemplate.opsForValue();
         Page<User> userPage = (Page<User>) valueOperations.get(redisKey);
-
         if (userPage != null) {
+            //每次刷新顺序都打乱 达到刷新效果
+            userPage.setRecords(fixTheFirstUser((userPage.getRecords())));
             return ResultUtils.success(userPage);
         }
         //如果没有缓存就从数据库中读取
@@ -158,6 +162,14 @@ public class UserController {
         }
         return ResultUtils.success(userPage);
 
+    }
+
+    // 随机打乱顺序 给前端刷新数据做准备
+    private List<User> fixTheFirstUser(List<User> userList) {
+        // 将元素打乱顺序
+        userList = userList.subList(1, userList.size());
+        Collections.shuffle(userList);
+        return userList;
     }
 
     /**
@@ -253,43 +265,46 @@ public class UserController {
 
     /**
      * 关注用户
-     * @param followId 被关注的用户id
-     * @param request 请求
-     * @return boolean
+     *
+     * @param followUserIdDTO 封装类
+     * @param request         请求
+     * @return IsFollowVO 返回封装类
      */
     @PostMapping("/follow")
-    public BaseResponse<Boolean> followUser ( @RequestParam("followId") long followId, HttpServletRequest request) {
+    public BaseResponse<IsFollowVO> followUser(@RequestBody FollowUserIdDTO followUserIdDTO, HttpServletRequest request) {
 
-        if (followId <=0 || request == null) {
+        if (followUserIdDTO.getFollowId() <= 0 || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        return ResultUtils.success(userService.followUser(followId, loginUser));
+        return ResultUtils.success(userService.followUser(followUserIdDTO.getFollowId(), loginUser));
     }
 
     /**
      * 取关用户
-     * @param followId 被关注的用户id
-     * @param request 请求
-     * @return boolean
+     *
+     * @param followUserIdDTO 封装类
+     * @param request  请求
+     * @return IsFollowVO 返回封装类
      */
     @PostMapping("/discard")
-    public BaseResponse<Boolean> discardUser ( @RequestParam("followId") long followId, HttpServletRequest request) {
+    public BaseResponse<IsFollowVO> discardUser(@RequestBody FollowUserIdDTO followUserIdDTO, HttpServletRequest request) {
 
-        if (followId <=0 || request == null) {
+        if (followUserIdDTO.getFollowId() <= 0 || request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        return ResultUtils.success(userService.discardUser(followId, loginUser));
+        return ResultUtils.success(userService.discardUser(followUserIdDTO.getFollowId(), loginUser));
     }
 
     /**
      * 查询用户关注列表
+     *
      * @param request 请求
      * @return boolean
      */
     @GetMapping("/list/follow")
-    public BaseResponse<List<User>> followListUser( HttpServletRequest request) {
+    public BaseResponse<List<User>> followListUser(HttpServletRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -299,18 +314,18 @@ public class UserController {
 
     /**
      * 查询用户粉丝列表
+     *
      * @param request 请求
      * @return boolean
      */
     @GetMapping("/list/fans")
-    public BaseResponse<List<User>> fansListUser( HttpServletRequest request) {
+    public BaseResponse<List<User>> fansListUser(HttpServletRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
         return ResultUtils.success(userService.fansListUser(loginUser));
     }
-
 
 
 }

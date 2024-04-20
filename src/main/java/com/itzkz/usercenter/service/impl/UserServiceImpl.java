@@ -11,15 +11,18 @@ import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.mapper.UserMapper;
 import com.itzkz.usercenter.model.domain.Follow;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.model.vo.IsFollowVO;
 import com.itzkz.usercenter.service.FollowService;
 import com.itzkz.usercenter.service.UserService;
 import com.itzkz.usercenter.tools.GenerateRecommendations;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,9 +33,13 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
-
+    private static final int MAX_ATTEMPTS = 5; // 最大失败次数
+    private static final int ATTEMPT_WINDOW_MINUTES = 10; // 时间窗口，单位：分钟
+    private static final String REDIS_KEY_PREFIX = "login_attempt:";
     @Resource
     private FollowService followService;
+    @Resource
+    private RedisTemplate redisTemplate;
 
     /**
      * 用户注册
@@ -99,6 +106,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+
+
         //1.校验
 
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
@@ -118,28 +127,69 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (matcher.find()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "包含非法字符");
         }
-
+        // 首先检查登录是否被允许
+        if (!isLoginAllowed(userAccount)) {
+            throw new BusinessException("登录次数超过限制，请稍后重试", 200, "");
+        }
         //2.加密
         String encryptPassword = SecureUtil.md5(userPassword);
 
-
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
         userLambdaQueryWrapper.eq(User::getUseraccount, userAccount);
-        userLambdaQueryWrapper.eq(User::getUserpassword, encryptPassword);
         User user = this.getOne(userLambdaQueryWrapper);
         //校验账号是否存在
         if (user == null) {
-            //            return ResultUtils.error(200,"账号已存在","");
             throw new BusinessException("账号不存在,请注册", 200, "");
+        }
+        //如果存在 判断密码是否相等
+        if (!Objects.equals(encryptPassword, user.getUserpassword())) {
+            //记录登录失败次数
+            recordLoginAttempt(userAccount);
+            throw new BusinessException("密码错误,请重试", 200, "");
         }
 
         //3.脱敏
-
         User safaUser = safaUser(user);
-
         //4.session
         request.getSession().setAttribute(UserConstant.SESSION_KEY, safaUser);
         return safaUser;
+    }
+
+    /**
+     * 检查给定用户名的登录是否被允许。
+     *
+     * @param username 要检查的用户名。
+     * @return 如果登录被允许，则返回 true；否则返回 false。
+     */
+    public boolean isLoginAllowed(String username) {
+        String key = REDIS_KEY_PREFIX + username;
+        long now = System.currentTimeMillis();
+        long windowEnd = now - ATTEMPT_WINDOW_MINUTES * 60 * 1000; // 时间窗口的结束时间
+
+        // 获取在时间窗口内的登录失败次数
+        Long attempts = redisTemplate.opsForZSet().count(key, windowEnd, now);
+
+        // 如果登录失败次数超过限制，则拒绝登录
+        if (attempts != null && attempts >= MAX_ATTEMPTS) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 记录登录失败的次数。
+     *
+     * @param username 登录失败的用户名。
+     */
+    public void recordLoginAttempt(String username) {
+        String key = REDIS_KEY_PREFIX + username;
+        long now = System.currentTimeMillis();
+
+        // 记录登录失败的时间戳
+        redisTemplate.opsForZSet().add(key, String.valueOf(now), now);
+        // 设置过期时间，确保记录的时间窗口不会一直增长
+        redisTemplate.expire(key, ATTEMPT_WINDOW_MINUTES, TimeUnit.MINUTES);
     }
 
     /**
@@ -217,6 +267,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //2.先把用户数据拿出来再进行判断查询
         //1.先查询所有用户
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.last("limit 100"); // 限制查询结果最多返回100条记录
         List<User> userList = this.list(queryWrapper);
         Gson gson = new Gson();
         //2.在内存中判断是否包含要求的标签
@@ -386,10 +437,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      *
      * @param followId  被关注的用户id
      * @param loginUser 登录用户
-     * @return boolean
+     * @return IsFollowVO 返回封装类
      */
     @Override
-    public boolean followUser(long followId, User loginUser) {
+    public IsFollowVO followUser(long followId, User loginUser) {
         //- 请求参数是否为空
         if (followId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -404,19 +455,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "您关注的用户不存在");
         }
         //不能关注自己
-        if (followId==loginUser.getId()){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR,"不能关注自己");
+        if (followId == loginUser.getId()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "不能关注自己");
         }
+        //不能重复关注已关注的
+        LambdaQueryWrapper<Follow> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        followLambdaQueryWrapper.eq(Follow::getFolloweruserid,loginUser.getId()).eq(Follow::getFolloweduserid,followId);
+        Follow one = followService.getOne(followLambdaQueryWrapper);
+        if (!(one ==null)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"已关注");
+        }
+
         //- 插入关注关系表
         Follow follow = new Follow();
         follow.setFolloweruserid(loginUser.getId());
         follow.setFolloweduserid(followId);
         follow.setFollowtime(new Date());
         boolean result = followService.save(follow);
+        IsFollowVO isFollowVO = new IsFollowVO();
+        isFollowVO.setFollow(true);
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
-        return true;
+        return isFollowVO;
     }
 
     /**
@@ -424,10 +485,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      *
      * @param followId  被取关的用户id
      * @param loginUser 登录用户
-     * @return boolean
+     * @return IsFollowVO 返回封装类
      */
     @Override
-    public boolean discardUser(long followId, User loginUser) {
+    public IsFollowVO discardUser(long followId, User loginUser) {
         //- 请求参数是否为空
         if (followId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -442,17 +503,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "您关注的用户不存在");
         }
         //不能取关自己
-        if (followId==loginUser.getId()){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR,"不能取关自己");
+        if (followId == loginUser.getId()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "不能取关自己");
         }
+        //判断要取关的用户是否已经关注了
+        LambdaQueryWrapper<Follow> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        followLambdaQueryWrapper.eq(Follow::getFolloweruserid,loginUser.getId()).eq(Follow::getFolloweduserid,followId);
+        Follow one = followService.getOne(followLambdaQueryWrapper);
+        if (one ==null){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"未关注");
+        }
+
         //- 删除关注关系表
         LambdaQueryWrapper<Follow> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Follow::getFolloweruserid, loginUser.getId()).eq(Follow::getFolloweduserid, followId);
         boolean result = followService.remove(queryWrapper);
+        IsFollowVO isFollowVO = new IsFollowVO();
+        isFollowVO.setFollow(false);
         if (!result) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
-        return true;
+        return isFollowVO;
     }
 
     /**
@@ -502,7 +573,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         List<Long> userIds = isFollow ?
                 followList.stream().map(Follow::getFolloweduserid).collect(Collectors.toList()) :
                 followList.stream().map(Follow::getFolloweruserid).collect(Collectors.toList());
-        if (userIds.isEmpty()){
+        if (userIds.isEmpty()) {
             return new ArrayList<>();
         }
         //- 查询关注或粉丝用户信息并且进行脱敏返回
