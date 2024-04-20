@@ -1,11 +1,15 @@
 package com.itzkz.usercenter;
+import java.util.Date;
 
 import cn.hutool.core.lang.Assert;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.itzkz.usercenter.model.domain.Tags;
 import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
+import com.itzkz.usercenter.service.TagsService;
 import com.itzkz.usercenter.service.UserService;
 import com.itzkz.usercenter.tools.GenerateRecommendations;
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import org.apache.tomcat.util.threads.ThreadPoolExecutor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -22,6 +26,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 @SpringBootTest
@@ -34,7 +39,8 @@ class UserCenterApplicationTests {
     @Resource
     private RedisTemplate redisTemplate;
 
-
+    @Resource
+    private TagsService tagsService;
     @Test
     void contextLoads() {
         String userAccount = "yupi";
@@ -315,12 +321,85 @@ class UserCenterApplicationTests {
         }
     }
 
+    @Test
+    public void addTags(){
+        // 性别标签
+        Tags genderTags = new Tags();
+        genderTags.setParenttagname("性别");
+        genderTags.setChildtags("[\"男\",\"女\"]");
+        tagsService.save(genderTags);
+
+        // 方向标签
+        Tags directionTags = new Tags();
+        directionTags.setParenttagname("方向");
+        directionTags.setChildtags("[\"Java\",\"C++\",\"Go\",\"前端\"]");
+        tagsService.save(directionTags);
+
+        // 正在学标签
+        Tags learningTags = new Tags();
+        learningTags.setParenttagname("正在学");
+        learningTags.setChildtags("[\"Spring\"]");
+        tagsService.save(learningTags);
+
+        // 目标标签
+        Tags goalTags = new Tags();
+        goalTags.setParenttagname("目标");
+        goalTags.setChildtags("[\"考研\",\"春招\",\"秋招\",\"社招\",\"考公\",\"竞赛（蓝桥杯）\",\"转行\",\"跳槽\"]");
+        tagsService.save(goalTags);
+
+        // 段位标签
+        Tags rankTags = new Tags();
+        rankTags.setParenttagname("段位");
+        rankTags.setChildtags("[\"初级\",\"中级\",\"高级\",\"王者\"]");
+        tagsService.save(rankTags);
+
+        // 身份标签
+        Tags identityTags = new Tags();
+        identityTags.setParenttagname("身份");
+        identityTags.setChildtags("[\"小学\",\"初中\",\"高中\",\"大一\",\"大二\",\"大三\",\"大四\",\"学生\",\"待业\",\"已就业\",\"研一\",\"研二\",\"研三\"]");
+        tagsService.save(identityTags);
+
+        // 状态标签
+        Tags statusTags = new Tags();
+        statusTags.setParenttagname("状态");
+        statusTags.setChildtags("[\"乐观\",\"有点丧\",\"一般\",\"单身\",\"已婚\",\"有对象\"]");
+        tagsService.save(statusTags);
+    }
 
 
 
+    @Test
+    public void ListTags(){
 
+
+        List<String> ParentTagsNameList = tagsService.list().stream().map(Tags::getParenttagname).collect(Collectors.toList());
+        System.out.println(ParentTagsNameList);
+
+        List<String> list = tagsService.list().stream().map(Tags::getChildtags).collect(Collectors.toList());
+        System.out.println(list);
+    }
+
+
+    @Test
+    public void testTags(){
+
+
+
+    // 获取所有标签
+    List<Tags> tagsList = tagsService.list();
+
+    // 构建标签Map
+    Map<String, List<String>> tagsMap = new HashMap<>();
+        for (Tags tags : tagsList) {
+        tagsMap.put(tags.getParenttagname(), Arrays.asList(tags.getChildtags().replaceAll("\\[|\\]|\"", "").split(",")));
+    }
+
+        System.out.println(tagsMap);
 
 }
+}
+
+
 
 
 

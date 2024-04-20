@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itzkz.usercenter.mapper.TagsMapper">
+
+    <resultMap id="BaseResultMap" type="com.itzkz.usercenter.model.domain.Tags">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="parenttagname" column="parentTagName" jdbcType="VARCHAR"/>
+            <result property="childtags" column="childTags" jdbcType="VARCHAR"/>
+            <result property="createtime" column="createTime" jdbcType="TIMESTAMP"/>
+            <result property="updatetime" column="updateTime" jdbcType="TIMESTAMP"/>
+            <result property="isdelete" column="isDelete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,parentTagName,childTags,
+        createTime,updateTime,isDelete
+    </sql>
+</mapper>
