@@ -28,8 +28,6 @@ mybatis-plus:
     map-underscore-to-camel-case: false
     # 配置 MyBatis SQL 执行日志输出级别
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-
-
   global-config:
     db-config:
       logic-delete-field: isDelete
