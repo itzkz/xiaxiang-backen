@@ -2,7 +2,6 @@ package com.itzkz.usercenter.controller;
 
 import com.itzkz.usercenter.common.BaseResponse;
 import com.itzkz.usercenter.common.ResultUtils;
-import com.itzkz.usercenter.model.dto.UploadFileDTO;
 import com.itzkz.usercenter.tools.AliOSSUtils;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,8 @@ import java.io.IOException;
 public class UploadController {
     @Resource
     private AliOSSUtils aliOSSUtils;
-//    本地存储文件
+
+    //    本地存储文件
 //    @PostMapping("/upload")
 //    public Result upload(String username , Integer age, MultipartFile image) throws IOException {
 //        log.info("文件上传:{},{},{}",username,age,image);

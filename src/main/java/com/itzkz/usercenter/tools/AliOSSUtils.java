@@ -1,9 +1,11 @@
 package com.itzkz.usercenter.tools;
+
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
@@ -14,8 +16,9 @@ import java.util.UUID;
  */
 
 public class AliOSSUtils {
-    @Autowired
- private AliOSSProperties aliOSSProperties;
+    @Resource
+    private AliOSSProperties aliOSSProperties;
+
     /**
      * 实现上传图片到OSS
      */
