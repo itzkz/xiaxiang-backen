@@ -2,6 +2,7 @@ package com.itzkz.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.google.gson.Gson;
 import com.itzkz.usercenter.common.BaseResponse;
 import com.itzkz.usercenter.common.ErrorCode;
 import com.itzkz.usercenter.common.ResultUtils;
@@ -9,9 +10,11 @@ import com.itzkz.usercenter.constant.UserConstant;
 import com.itzkz.usercenter.exception.BusinessException;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.dto.FollowUserIdDTO;
+import com.itzkz.usercenter.model.dto.SaveTagsDTO;
 import com.itzkz.usercenter.model.request.UserLoginRequest;
 import com.itzkz.usercenter.model.request.UserRegisterRequest;
 import com.itzkz.usercenter.model.vo.IsFollowVO;
+import com.itzkz.usercenter.model.vo.UserVO;
 import com.itzkz.usercenter.service.UserService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
@@ -72,7 +75,7 @@ public class UserController {
      */
 
     @PostMapping("/login")
-    public BaseResponse<User> userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
+    public BaseResponse<UserVO> userLogin(@RequestBody UserLoginRequest loginRequest, HttpServletRequest request) {
         if (loginRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -81,8 +84,8 @@ public class UserController {
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User user = userService.userLogin(userAccount, userPassword, request);
-        return ResultUtils.success(user);
+        UserVO userVo = userService.userLogin(userAccount, userPassword, request);
+        return ResultUtils.success(userVo);
     }
 
     /**
@@ -284,7 +287,7 @@ public class UserController {
      * 取关用户
      *
      * @param followUserIdDTO 封装类
-     * @param request  请求
+     * @param request         请求
      * @return IsFollowVO 返回封装类
      */
     @PostMapping("/discard")
@@ -327,5 +330,28 @@ public class UserController {
         return ResultUtils.success(userService.fansListUser(loginUser));
     }
 
+    /**
+     * @param saveTagsDTO
+     * @param request
+     * @return
+     */
+    @PostMapping("/save/tags")
+    public BaseResponse<Boolean> userSaveTags(@RequestBody SaveTagsDTO saveTagsDTO, HttpServletRequest request) {
+        if (saveTagsDTO == null || request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
 
+        User loginUser = userService.getLoginUser(request);
+        List<String> tagNameList = saveTagsDTO.getTagNameList();
+        //将传入的列表转成JSON字符串
+        Gson gson = new Gson();
+        String tags = gson.toJson(tagNameList);
+
+        loginUser.setTags(tags);
+
+        // 更新 loginUser 到数据库中
+        boolean updateSuccess = userService.updateById(loginUser);
+
+        return ResultUtils.success(updateSuccess);
+    }
 }

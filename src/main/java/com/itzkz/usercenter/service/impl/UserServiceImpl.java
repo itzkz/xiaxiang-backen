@@ -12,10 +12,12 @@ import com.itzkz.usercenter.mapper.UserMapper;
 import com.itzkz.usercenter.model.domain.Follow;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.vo.IsFollowVO;
+import com.itzkz.usercenter.model.vo.UserVO;
 import com.itzkz.usercenter.service.FollowService;
 import com.itzkz.usercenter.service.UserService;
 import com.itzkz.usercenter.tools.GenerateRecommendations;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -105,7 +107,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return 脱敏用户
      */
     @Override
-    public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+    public UserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
 
 
         //1.校验
@@ -147,12 +149,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             recordLoginAttempt(userAccount);
             throw new BusinessException("密码错误,请重试", 200, "");
         }
-
+        // 判断用户标签是否为空 返回UserVO对象 为空将tagsisnoll 设置为true 目的 为了前端可以根据此字段更快的去判断用户登录成功是否需要跳转到选择标签页面
+        String tags = user.getTags();
+        UserVO userVO = new UserVO();
+        userVO.setTagsisnoll(StringUtils.isBlank(tags));
+        BeanUtils.copyProperties(user, userVO);
         //3.脱敏
         User safaUser = safaUser(user);
         //4.session
         request.getSession().setAttribute(UserConstant.SESSION_KEY, safaUser);
-        return safaUser;
+        return userVO;
     }
 
     /**
@@ -460,10 +466,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         //不能重复关注已关注的
         LambdaQueryWrapper<Follow> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        followLambdaQueryWrapper.eq(Follow::getFolloweruserid,loginUser.getId()).eq(Follow::getFolloweduserid,followId);
+        followLambdaQueryWrapper.eq(Follow::getFolloweruserid, loginUser.getId()).eq(Follow::getFolloweduserid, followId);
         Follow one = followService.getOne(followLambdaQueryWrapper);
-        if (!(one ==null)){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR,"已关注");
+        if (!(one == null)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已关注");
         }
 
         //- 插入关注关系表
@@ -508,10 +514,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         //判断要取关的用户是否已经关注了
         LambdaQueryWrapper<Follow> followLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        followLambdaQueryWrapper.eq(Follow::getFolloweruserid,loginUser.getId()).eq(Follow::getFolloweduserid,followId);
+        followLambdaQueryWrapper.eq(Follow::getFolloweruserid, loginUser.getId()).eq(Follow::getFolloweduserid, followId);
         Follow one = followService.getOne(followLambdaQueryWrapper);
-        if (one ==null){
-            throw new BusinessException(ErrorCode.PARAMS_ERROR,"未关注");
+        if (one == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "未关注");
         }
 
         //- 删除关注关系表

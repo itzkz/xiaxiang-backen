@@ -3,6 +3,7 @@ import java.util.Date;
 
 import cn.hutool.core.lang.Assert;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.google.gson.Gson;
 import com.itzkz.usercenter.model.domain.Tags;
 import com.itzkz.usercenter.model.domain.Team;
 import com.itzkz.usercenter.model.domain.User;
@@ -41,6 +42,7 @@ class UserCenterApplicationTests {
 
     @Resource
     private TagsService tagsService;
+
     @Test
     void contextLoads() {
         String userAccount = "yupi";
@@ -268,8 +270,8 @@ class UserCenterApplicationTests {
 //        List<User> users = new ArrayList<>();
         List<Integer> teamIdList = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(User::getId,teamIdList);
-        queryWrapper.select(User::getId,User::getTags);
+        queryWrapper.in(User::getId, teamIdList);
+        queryWrapper.select(User::getId, User::getTags);
         List<User> users = userService.list(queryWrapper);
 //        // 用户1
 //        User user1 = new User();
@@ -308,13 +310,13 @@ class UserCenterApplicationTests {
 //        users.add(user6);
 
         // 创建目标用户
-        User targetUser =userService.getById(3);
-      // 假设目标用户ID为3
+        User targetUser = userService.getById(3);
+        // 假设目标用户ID为3
 
 
         // 生成推荐列表
         GenerateRecommendations generateRecommendations = new GenerateRecommendations();
-        List<User> userList = generateRecommendations.generateRecommendations(targetUser,users,5);
+        List<User> userList = generateRecommendations.generateRecommendations(targetUser, users, 5);
         // 输出推荐列表
         for (User user : userList) {
             System.out.println("用户 " + user.getId());
@@ -322,7 +324,7 @@ class UserCenterApplicationTests {
     }
 
     @Test
-    public void addTags(){
+    public void addTags() {
         // 性别标签
         Tags genderTags = new Tags();
         genderTags.setParenttagname("性别");
@@ -367,9 +369,8 @@ class UserCenterApplicationTests {
     }
 
 
-
     @Test
-    public void ListTags(){
+    public void ListTags() {
 
 
         List<String> ParentTagsNameList = tagsService.list().stream().map(Tags::getParenttagname).collect(Collectors.toList());
@@ -381,29 +382,35 @@ class UserCenterApplicationTests {
 
 
     @Test
-    public void testTags(){
+    public void testTags() {
 
 
+        // 获取所有标签
+        List<Tags> tagsList = tagsService.list();
 
-    // 获取所有标签
-    List<Tags> tagsList = tagsService.list();
-
-    // 构建标签Map
-    Map<String, List<String>> tagsMap = new HashMap<>();
+        // 构建标签Map
+        Map<String, List<String>> tagsMap = new HashMap<>();
         for (Tags tags : tagsList) {
-        tagsMap.put(tags.getParenttagname(), Arrays.asList(tags.getChildtags().replaceAll("\\[|\\]|\"", "").split(",")));
-    }
+            tagsMap.put(tags.getParenttagname(), Arrays.asList(tags.getChildtags().replaceAll("\\[|\\]|\"", "").split(",")));
+        }
 
         System.out.println(tagsMap);
 
+    }
+
+
+    @Test
+    public void JsonTags() {
+
+        // 假设 tagNameList 是前端传入的标签列表
+        List<String> tagNameList = Arrays.asList("Java", "C++", "Go", "前端");
+
+        // 使用 Gson 对象将标签列表转换为 JSON 字符串
+        Gson gson = new Gson();
+        String tagsJson = gson.toJson(tagNameList);
+        System.out.println(tagsJson);
+
+    }
+
+
 }
-}
-
-
-
-
-
-
-
-
-

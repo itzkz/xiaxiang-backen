@@ -3,6 +3,7 @@ package com.itzkz.usercenter.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.itzkz.usercenter.model.domain.User;
 import com.itzkz.usercenter.model.vo.IsFollowVO;
+import com.itzkz.usercenter.model.vo.UserVO;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -30,7 +31,7 @@ public interface UserService extends IService<User> {
      * @param request
      * @return 脱敏的用户信息
      */
-    User userLogin(String userAccount, String userPassword, HttpServletRequest request);
+    UserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
     /**
      * 用户注销

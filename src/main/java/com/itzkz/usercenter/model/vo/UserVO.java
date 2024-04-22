@@ -55,7 +55,7 @@ public class UserVO implements Serializable {
     /**
      * 标签列表
      */
-    private  String tags;
+    private String tags;
     /**
      * 创建时间
      */
@@ -65,7 +65,10 @@ public class UserVO implements Serializable {
      * 更新时间
      */
     private Date updatetime;
-
+    /**
+     * 用户标签是否为空  true 空 false 不空
+     */
+    private boolean tagsisnoll;
     /**
      * 用户角色 0普通用户 1 管理员
      */
